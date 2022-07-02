@@ -1,41 +1,67 @@
 import React from 'react';
 import { AppUI } from './AppUI';
 
-// const defaultTodos = [
-//   { text: 'Cortar cebolla', completed: true },
-//   { text: 'Tomar el cursso de intro a React', completed: false },
-//   { text: 'Llorar con la llorona', completed: true },
-//   { text: 'LALALALAA', completed: false },
-// ];
-
 function useLocalStorage(itemName, initialValue) {
-  const localStorageItem = localStorage.getItem(itemName);
-  let parsedItem;
+  // Creamos el estado inicial para nuestros errores y carga
+  const [error, setError] = React.useState(false);
+  const [loading, setLoading] = React.useState(true);
+  const [item, setItem] = React.useState(initialValue);
   
-  if (!localStorageItem) {
-    localStorage.setItem(itemName, JSON.stringify(initialValue));
-    parsedItem = initialValue;
-  } else {
-    parsedItem = JSON.parse(localStorageItem);
-  }
+  React.useEffect(() => {
+  // Simulamos un segundo de delay de carga 
+    setTimeout(() => {
+      // Manejamos la tarea dentro de un try/catch por si ocurre algún error
+      try {
+        const localStorageItem = localStorage.getItem(itemName);
+        let parsedItem;
+        
+        if (!localStorageItem) {
+          localStorage.setItem(itemName, JSON.stringify(initialValue));
+          parsedItem = initialValue;
+        } else {
+          parsedItem = JSON.parse(localStorageItem);
+        }
 
-  const [item, setItem] = React.useState(parsedItem);
-
+        setItem(parsedItem);
+      } catch(error) {
+      // En caso de un error lo guardamos en el estado
+        setError(error);
+      } finally {
+        // También podemos utilizar la última parte del try/cath (finally) para terminar la carga
+        setLoading(false);
+      }
+    }, 1000);
+  });
+  
   const saveItem = (newItem) => {
-    const stringifiedItem = JSON.stringify(newItem);
-    localStorage.setItem(itemName, stringifiedItem);
-    setItem(newItem);
+    // Manejamos la tarea dentro de un try/catch por si ocurre algún error
+    try {
+      const stringifiedItem = JSON.stringify(newItem);
+      localStorage.setItem(itemName, stringifiedItem);
+      setItem(newItem);
+    } catch(error) {
+      // En caso de algún error lo guardamos en el estado
+      setError(error);
+    }
   };
 
-  return [
+  // Para tener un mejor control de los datos retornados, podemos regresarlos dentro de un objeto
+  return {
     item,
     saveItem,
-  ];
+    loading,
+    error,
+  };
 }
 
 function App() {
-  // Desestructuramos los datos que retornamos de nuestro custom hook, y le pasamos los argumentos que necesitamos (nombre y estado inicial)
-  const [todos, saveTodos] = useLocalStorage('TODOS_V1', []);
+  // Desestructuramos los nuevos datos de nustro custom hook
+  const {
+    item: todos,
+    saveItem: saveTodos,
+    loading,
+    error,
+  } = useLocalStorage('TODOS_V1', []);
   const [searchValue, setSearchValue] = React.useState('');
 
   const completedTodos = todos.filter(todo => !!todo.completed).length;
@@ -66,9 +92,12 @@ function App() {
     newTodos.splice(todoIndex, 1);
     saveTodos(newTodos);
   };
-  
+
   return (
+    /* Pasamos los valores de loading y error */
     <AppUI
+      loading={loading}
+      error={error}
       totalTodos={totalTodos}
       completedTodos={completedTodos}
       searchValue={searchValue}
